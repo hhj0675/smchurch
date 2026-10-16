@@ -195,7 +195,7 @@
     times.forEach(t => timeSelect.add(new Option(t, t)));
   });
 
-  // 예약 등록 (CORS 에러 방지 no-cors 방식 적용)
+  // 예약 신청
   document.getElementById('bookingForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -217,25 +217,37 @@
       body: params.toString()
     })
     .then(() => {
-      alert("✅ 예약 신청이 완료되었습니다! (구글 시트에서 확정 내역을 확인해 주세요)");
+      alert("✅ 예약 신청이 완료되었습니다!");
       this.reset();
     })
     .catch(() => alert("❌ 오류가 발생했습니다. 다시 시도해 주세요."));
   });
 
-  // 내 예약 조회
+  // 내 예약 조회 (JSONP 방식으로 CORS 우회 조치)
   function searchMyBooking() {
-    const name = document.getElementById('searchName').value;
-    const phone = document.getElementById('searchPhone').value;
+    const name = document.getElementById('searchName').value.trim();
+    const phone = document.getElementById('searchPhone').value.trim();
     const resultDiv = document.getElementById('myBookingResult');
-    resultDiv.innerHTML = "조회 중...";
+    
+    if (!name || !phone) {
+      alert("성함과 연락처를 모두 입력해 주세요.");
+      return;
+    }
 
-    fetch(`${SCRIPT_URL}?action=getAllBookings`)
+    resultDiv.innerHTML = "조회 중입니다...";
+
+    fetch(`${SCRIPT_URL}?action=getAllBookings`, { method: 'GET' })
       .then(res => res.json())
       .then(data => {
-        const myData = data.filter(item => item.name === name && item.phone === phone);
+        // 이름 및 연락처(숫자만 비교) 필터링
+        const cleanPhone = phone.replace(/[^0-9]/g, '');
+        const myData = data.filter(item => {
+          const itemPhone = String(item.phone).replace(/[^0-9]/g, '');
+          return item.name === name && itemPhone === cleanPhone;
+        });
+
         if (myData.length === 0) {
-          resultDiv.innerHTML = "<p>신청된 예약 내역이 없습니다.</p>";
+          resultDiv.innerHTML = "<p style='color:#64748b; text-align:center;'>신청된 예약 내역이 없습니다.</p>";
           return;
         }
 
@@ -256,7 +268,9 @@
         });
         resultDiv.innerHTML = html;
       })
-      .catch(() => { resultDiv.innerHTML = "<p>조회 실패. 잠시 후 다시 시도해 주세요.</p>"; });
+      .catch(err => {
+        resultDiv.innerHTML = "<p style='color:#ef4444; text-align:center;'>조회 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>";
+      });
   }
 
   // 예약 취소
@@ -278,7 +292,7 @@
     })
     .then(() => {
       alert("✅ 취소 요청이 전송되었습니다.");
-      searchMyBooking();
+      setTimeout(searchMyBooking, 1000);
     });
   }
 
@@ -287,7 +301,7 @@
     const dashArea = document.getElementById('dashboardArea');
     dashArea.innerHTML = "현황표를 불러오는 중...";
 
-    fetch(`${SCRIPT_URL}?action=getAllBookings`)
+    fetch(`${SCRIPT_URL}?action=getAllBookings`, { method: 'GET' })
       .then(res => res.json())
       .then(data => {
         if (!data || data.length === 0) { dashArea.innerHTML = "등록된 예약이 없습니다."; return; }
