@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>교회 장소 예약 및 현황 시스템</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  
+  <style>
+    :root {
+      --primary-color: #2563eb;
+      --primary-hover: #1d4ed8;
+      --danger-color: #ef4444;
+      --bg-color: #f1f5f9;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-sub: #475569;
+      --border-color: #cbd5e1;
+    }
+
+    * { box-sizing: border-box; font-family: "Pretendard", -apple-system, sans-serif; }
+    body { background-color: var(--bg-color); margin: 0; padding: 16px; color: var(--text-main); display: flex; justify-content: center; }
+
+    .booking-card {
+      width: 100%; max-width: 540px; background: var(--card-bg); padding: 24px; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+    }
+
+    .tab-menu { display: flex; background-color: #e2e8f0; border-radius: 14px; padding: 4px; margin-bottom: 20px; }
+    .tab-btn { flex: 1; padding: 12px 0; border: none; background: none; font-size: 15px; font-weight: 700; color: var(--text-sub); border-radius: 10px; cursor: pointer; transition: all 0.2s; text-align: center; }
+    .tab-btn.active { background-color: #ffffff; color: var(--primary-color); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    select, input { width: 100%; height: 52px; font-size: 16px; padding: 0 14px; border: 2px solid var(--border-color); border-radius: 12px; background-color: #f8fafc; outline: none; }
+    select:focus, input:focus { border-color: var(--primary-color); background-color: #fff; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .btn-submit { width: 100%; height: 58px; background: var(--primary-color); color: #fff; font-size: 18px; font-weight: 800; border: none; border-radius: 14px; cursor: pointer; margin-top: 10px; }
+    .btn-danger { background-color: var(--danger-color); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+
+    .item-card { background: #f8fafc; border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .item-info { font-size: 14px; line-height: 1.5; }
+    .item-title { font-weight: 800; font-size: 16px; color: var(--primary-color); }
+    .status-badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+    .status-active { background: #dbeafe; color: #1e40af; }
+    .status-canceled { background: #fee2e2; color: #991b1b; }
+
+    .schedule-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
+    .schedule-table th, .schedule-table td { border: 1px solid var(--border-color); padding: 8px; text-align: center; }
+    .schedule-table th { background-color: #f1f5f9; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<div class="booking-card">
+  <!-- 탭 메뉴 -->
+  <div class="tab-menu">
+    <button class="tab-btn active" onclick="switchTab('tab-book', this)">📝 예약하기</button>
+    <button class="tab-btn" onclick="switchTab('tab-my', this)">🔍 내 예약/취소</button>
+    <button class="tab-btn" onclick="switchTab('tab-board', this); loadDashboard();">📅 전체 현황표</button>
+  </div>
+
+  <!-- 탭 1: 예약 신청 -->
+  <div id="tab-book" class="tab-content active">
+    <form id="bookingForm">
+      <div class="form-group">
+        <label>📍 예약 장소 선택</label>
+        <select id="room" required>
+          <option value="">장소를 선택하세요</option>
+          
+          <optgroup label="이음센터 4층">
+            <option value="청년부 활동실 1">청년부 활동실 1</option>
+            <option value="청년부 활동실 2">청년부 활동실 2</option>
+            <option value="당회실">당회실</option>
+            <option value="소모임실 1 (4층)">소모임실 1</option>
+            <option value="소모임실 2 (4층)">소모임실 2</option>
+            <option value="상담실">상담실</option>
+          </optgroup>
+
+          <optgroup label="이음센터 3층">
+            <option value="중등부 활동실">중등부 활동실</option>
+            <option value="고등부 활동실">고등부 활동실</option>
+            <option value="소모임실 1 (3층)">소모임실 1</option>
+            <option value="소모임실 2 (3층)">소모임실 2</option>
+          </optgroup>
+
+          <optgroup label="이음센터 2층">
+            <option value="유년부실(출입구쪽)">유년부실 (출입구쪽)</option>
+            <option value="유년부실(안쪽)">유년부실 (안쪽)</option>
+            <option value="초등부실(출입구쪽)">초등부실 (출입구쪽)</option>
+            <option value="초등부실(안쪽)">초등부실 (안쪽)</option>
+          </optgroup>
+
+          <optgroup label="이음센터 1층">
+            <option value="영아부실(출입구쪽)">영아부실 (출입구쪽)</option>
+            <option value="영아부실(안쪽)">영아부실 (안쪽)</option>
+          </optgroup>
+
+          <optgroup label="본관 3층">
+            <option value="유치부실">유치부실</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>👥 신청 교구 및 셀</label>
+        <div class="grid-2">
+          <select id="district" required>
+            <option value="">교구 선택</option>
+            <option value="1교구">1교구</option>
+            <option value="2교구">2교구</option>
+            <option value="3교구">3교구</option>
+            <option value="4교구">4교구</option>
+            <option value="청년부">청년부</option>
+            <option value="셀외">셀외 (부서/사역)</option>
+          </select>
+          <select id="cell" required><option value="">셀 선택</option></select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>📅 예약 날짜</label>
+        <input type="date" id="date" required>
+      </div>
+
+      <div class="form-group">
+        <label>⏰ 이용 시간대</label>
+        <select id="time" required><option value="">날짜를 먼저 선택해 주세요</option></select>
+      </div>
+
+      <div class="form-group">
+        <label>👤 신청자 성함</label>
+        <input type="text" id="name" placeholder="예: 홍길동" required>
+      </div>
+
+      <div class="form-group">
+        <label>📞 연락처</label>
+        <input type="tel" id="phone" placeholder="010-1234-5678" required>
+      </div>
+
+      <button type="submit" class="btn-submit">예약 신청하기</button>
+    </form>
+  </div>
+
+  <!-- 탭 2: 내 예약 조회 및 취소 -->
+  <div id="tab-my" class="tab-content">
+    <div class="form-group">
+      <label>성함</label>
+      <input type="text" id="searchName" placeholder="신청자 성함 입력">
+    </div>
+    <div class="form-group">
+      <label>연락처</label>
+      <input type="tel" id="searchPhone" placeholder="010-1234-5678 입력">
+    </div>
+    <button type="button" class="btn-submit" onclick="searchMyBooking()" style="height: 48px; font-size: 16px;">내 예약 조회하기</button>
+
+    <div id="myBookingResult" style="margin-top: 20px;"></div>
+  </div>
+
+  <!-- 탭 3: 전체 요일별/시간대별 현황판 -->
+  <div id="tab-board" class="tab-content">
+    <h3 style="margin-top:0;">📅 전체 예약 현황</h3>
+    <p style="font-size: 13px; color: var(--text-sub);">실시간 장소별·시간대별 예약 신청 현황입니다.</p>
+    <div id="dashboardArea">조회 중...</div>
+  </div>
+</div>
+
+<script>
+  // ✅ 보내주신 발급 URL 반영 완료
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyxXSgTtZ--88gANOXeCymoZjYJXFBhT9W2ssT94NMDbL8Ztd6UGukK41_hKmTKN4pp/exec';
+
+  // 셀 스크롤 옵션 자동 생성 (1~30셀 + 믿음1셀 + 셀외)
+  const cellSelect = document.getElementById('cell');
+  for (let i = 1; i <= 30; i++) {
+    cellSelect.add(new Option(i + '셀', i + '셀'));
+  }
+  cellSelect.add(new Option('믿음1셀', '믿음1셀'));
+  cellSelect.add(new Option('해당없음(셀외)', '해당없음(셀외)'));
+
+  function switchTab(tabId, btn) {
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  const dateInput = document.getElementById('date');
+  dateInput.min = new Date().toISOString().split("T")[0];
+  dateInput.addEventListener('change', function() {
+    const day = new Date(this.value).getDay();
+    const timeSelect = document.getElementById('time');
+    timeSelect.innerHTML = '<option value="">시간대를 선택해 주세요</option>';
+
+    const times = (day === 0 || day === 6) 
+      ? ["오후 03:00 ~ 05:00 (주말)", "오후 05:00 ~ 07:00 (주말)", "저녁 07:00 ~ 09:00 (주말)"]
+      : ["오전 09:30 ~ 12:00 (주중 오전)", "오후 01:30 ~ 04:30 (주중 오후)", "저녁 07:00 ~ 09:30 (주중 저녁)"];
+
+    times.forEach(t => timeSelect.add(new Option(t, t)));
+  });
+
+  document.getElementById('bookingForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append('room', document.getElementById('room').value);
+    formData.append('district', document.getElementById('district').value);
+    formData.append('cell', document.getElementById('cell').value);
+    formData.append('date', document.getElementById('date').value);
+    formData.append('time', document.getElementById('time').value);
+    formData.append('name', document.getElementById('name').value);
+    formData.append('phone', document.getElementById('phone').value);
+
+    alert("예약을 등록 중입니다...");
+    fetch(SCRIPT_URL, { method: 'POST', body: formData })
+      .then(() => { alert("✅ 예약 신청이 완료되었습니다!"); this.reset(); })
+      .catch(() => alert("❌ 등록 중 오류가 발생했습니다."));
+  });
+
+  function searchMyBooking() {
+    const name = document.getElementById('searchName').value;
+    const phone = document.getElementById('searchPhone').value;
+    const resultDiv = document.getElementById('myBookingResult');
+    resultDiv.innerHTML = "조회 중...";
+
+    fetch(`${SCRIPT_URL}?action=getAllBookings`)
+      .then(res => res.json())
+      .then(data => {
+        const myData = data.filter(item => item.name === name && item.phone === phone);
+        if (myData.length === 0) {
+          resultDiv.innerHTML = "<p>신청된 예약 내역이 없습니다.</p>";
+          return;
+        }
+
+        let html = "";
+        myData.forEach(item => {
+          const isCanceled = item.status === "예약취소";
+          html += `
+            <div class="item-card">
+              <div class="item-info">
+                <div class="item-title">${item.room}</div>
+                <div>📅 ${item.date} | ⏰ ${item.time}</div>
+                <div>👥 ${item.district} ${item.cell}</div>
+                <span class="status-badge ${isCanceled ? 'status-canceled' : 'status-active'}">${item.status}</span>
+              </div>
+              ${!isCanceled ? `<button class="btn-danger" onclick="cancelBooking('${item.name}', '${item.phone}', '${item.date}', '${item.room}')">취소</button>` : ''}
+            </div>
+          `;
+        });
+        resultDiv.innerHTML = html;
+      });
+  }
+
+  function cancelBooking(name, phone, date, room) {
+    if (!confirm(`${room} (${date}) 예약을 취소하시겠습니까?`)) return;
+
+    const formData = new FormData();
+    formData.append('action', 'cancel');
+    formData.append('name', name);
+    formData.append('phone', phone);
+    formData.append('date', date);
+    formData.append('room', room);
+
+    fetch(SCRIPT_URL, { method: 'POST', body: formData })
+      .then(res => res.text())
+      .then(res => {
+        alert("✅ 예약이 취소되었습니다.");
+        searchMyBooking();
+      });
+  }
+
+  function loadDashboard() {
+    const dashArea = document.getElementById('dashboardArea');
+    dashArea.innerHTML = "현황표를 불러오는 중...";
+
+    fetch(`${SCRIPT_URL}?action=getAllBookings`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data || data.length === 0) { dashArea.innerHTML = "등록된 예약이 없습니다."; return; }
+
+        let html = `<table class="schedule-table">
+          <thead>
+            <tr><th>날짜</th><th>장소</th><th>시간대</th><th>신청셀</th><th>상태</th></tr>
+          </thead>
+          <tbody>`;
+        
+        data.reverse().forEach(item => {
+          html += `<tr>
+            <td>${item.date}</td>
+            <td>${item.room}</td>
+            <td>${item.time}</td>
+            <td>${item.district} ${item.cell}</td>
+            <td>${item.status}</td>
+          </tr>`;
+        });
+        html += `</tbody></table>`;
+        dashArea.innerHTML = html;
+      });
+  }
+</script>
+
+</body>
+</html>
