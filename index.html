@@ -71,7 +71,6 @@
         <label>📍 예약 장소 선택</label>
         <select id="room" required>
           <option value="">장소를 선택하세요</option>
-          
           <optgroup label="이음센터 4층">
             <option value="청년부 활동실 1">청년부 활동실 1</option>
             <option value="청년부 활동실 2">청년부 활동실 2</option>
@@ -80,26 +79,22 @@
             <option value="소모임실 2 (4층)">소모임실 2</option>
             <option value="상담실">상담실</option>
           </optgroup>
-
           <optgroup label="이음센터 3층">
             <option value="중등부 활동실">중등부 활동실</option>
             <option value="고등부 활동실">고등부 활동실</option>
             <option value="소모임실 1 (3층)">소모임실 1</option>
             <option value="소모임실 2 (3층)">소모임실 2</option>
           </optgroup>
-
           <optgroup label="이음센터 2층">
             <option value="유년부실(출입구쪽)">유년부실 (출입구쪽)</option>
             <option value="유년부실(안쪽)">유년부실 (안쪽)</option>
             <option value="초등부실(출입구쪽)">초등부실 (출입구쪽)</option>
             <option value="초등부실(안쪽)">초등부실 (안쪽)</option>
           </optgroup>
-
           <optgroup label="이음센터 1층">
             <option value="영아부실(출입구쪽)">영아부실 (출입구쪽)</option>
             <option value="영아부실(안쪽)">영아부실 (안쪽)</option>
           </optgroup>
-
           <optgroup label="본관 3층">
             <option value="유치부실">유치부실</option>
           </optgroup>
@@ -170,10 +165,8 @@
 </div>
 
 <script>
-  // ✅ 보내주신 발급 URL 반영 완료
   const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyxXSgTtZ--88gANOXeCymoZjYJXFBhT9W2ssT94NMDbL8Ztd6UGukK41_hKmTKN4pp/exec';
 
-  // 셀 스크롤 옵션 자동 생성 (1~30셀 + 믿음1셀 + 셀외)
   const cellSelect = document.getElementById('cell');
   for (let i = 1; i <= 30; i++) {
     cellSelect.add(new Option(i + '셀', i + '셀'));
@@ -202,23 +195,35 @@
     times.forEach(t => timeSelect.add(new Option(t, t)));
   });
 
+  // 예약 등록 (CORS 에러 방지 no-cors 방식 적용)
   document.getElementById('bookingForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append('room', document.getElementById('room').value);
-    formData.append('district', document.getElementById('district').value);
-    formData.append('cell', document.getElementById('cell').value);
-    formData.append('date', document.getElementById('date').value);
-    formData.append('time', document.getElementById('time').value);
-    formData.append('name', document.getElementById('name').value);
-    formData.append('phone', document.getElementById('phone').value);
+    
+    const params = new URLSearchParams();
+    params.append('room', document.getElementById('room').value);
+    params.append('district', document.getElementById('district').value);
+    params.append('cell', document.getElementById('cell').value);
+    params.append('date', document.getElementById('date').value);
+    params.append('time', document.getElementById('time').value);
+    params.append('name', document.getElementById('name').value);
+    params.append('phone', document.getElementById('phone').value);
 
-    alert("예약을 등록 중입니다...");
-    fetch(SCRIPT_URL, { method: 'POST', body: formData })
-      .then(() => { alert("✅ 예약 신청이 완료되었습니다!"); this.reset(); })
-      .catch(() => alert("❌ 등록 중 오류가 발생했습니다."));
+    alert("예약을 신청 중입니다...");
+
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    })
+    .then(() => {
+      alert("✅ 예약 신청이 완료되었습니다! (구글 시트에서 확정 내역을 확인해 주세요)");
+      this.reset();
+    })
+    .catch(() => alert("❌ 오류가 발생했습니다. 다시 시도해 주세요."));
   });
 
+  // 내 예약 조회
   function searchMyBooking() {
     const name = document.getElementById('searchName').value;
     const phone = document.getElementById('searchPhone').value;
@@ -250,27 +255,34 @@
           `;
         });
         resultDiv.innerHTML = html;
-      });
+      })
+      .catch(() => { resultDiv.innerHTML = "<p>조회 실패. 잠시 후 다시 시도해 주세요.</p>"; });
   }
 
+  // 예약 취소
   function cancelBooking(name, phone, date, room) {
     if (!confirm(`${room} (${date}) 예약을 취소하시겠습니까?`)) return;
 
-    const formData = new FormData();
-    formData.append('action', 'cancel');
-    formData.append('name', name);
-    formData.append('phone', phone);
-    formData.append('date', date);
-    formData.append('room', room);
+    const params = new URLSearchParams();
+    params.append('action', 'cancel');
+    params.append('name', name);
+    params.append('phone', phone);
+    params.append('date', date);
+    params.append('room', room);
 
-    fetch(SCRIPT_URL, { method: 'POST', body: formData })
-      .then(res => res.text())
-      .then(res => {
-        alert("✅ 예약이 취소되었습니다.");
-        searchMyBooking();
-      });
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    })
+    .then(() => {
+      alert("✅ 취소 요청이 전송되었습니다.");
+      searchMyBooking();
+    });
   }
 
+  // 전체 현황판
   function loadDashboard() {
     const dashArea = document.getElementById('dashboardArea');
     dashArea.innerHTML = "현황표를 불러오는 중...";
@@ -297,7 +309,8 @@
         });
         html += `</tbody></table>`;
         dashArea.innerHTML = html;
-      });
+      })
+      .catch(() => { dashArea.innerHTML = "현황 데이터를 불러오지 못했습니다."; });
   }
 </script>
 
